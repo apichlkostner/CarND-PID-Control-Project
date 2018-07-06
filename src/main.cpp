@@ -2,8 +2,9 @@
 #include <uWS/uWS.h>
 #include <iostream>
 #include "PID.h"
-#include "json.hpp"
 
+#include "ParameterSearch.h"
+#include "json.hpp"
 // for convenience
 using json = nlohmann::json;
 
@@ -11,6 +12,8 @@ using json = nlohmann::json;
 constexpr double pi() { return M_PI; }
 double deg2rad(double x) { return x * pi() / 180; }
 double rad2deg(double x) { return x * 180 / pi(); }
+
+constexpr bool PARAMETER_OPTIMIZATION_ENABLED = false;
 
 // Checks if the SocketIO event has JSON data.
 // If there is data the JSON object in string format will be returned,
@@ -31,11 +34,20 @@ int main() {
   uWS::Hub h;
 
   constexpr double TARGET_SPEED = 30;
-  PID pid(0.08, 0.1, 0.02);
-  PID pid_v(0.3, 0.05, 0.005);
+  // PID pid(0.08, 0.1, 0.02);
+  // initial pid parameters
+  std::vector<double> p{0.29614, 0.247961, 0.130195};
+  // initial delta parameters for optimization algorithm
+  std::vector<double> dp{0.00811128, 0.0279605, 0.0118056};
 
-  h.onMessage([&pid, &pid_v](uWS::WebSocket<uWS::SERVER> ws, char *data,
-                             size_t length, uWS::OpCode opCode) {
+  ParameterSearch ps(p, dp);
+  PID pid(p);
+  PID pid_v(0.3, 0.05, 0.005);
+  double cte_int = 0;
+
+  h.onMessage([&pid, &pid_v, &ps, &cte_int](uWS::WebSocket<uWS::SERVER> ws,
+                                            char *data, size_t length,
+                                            uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
     // The 2 signifies a websocket event
@@ -53,28 +65,41 @@ int main() {
 
           double throttle = pid_v.calc(speed - TARGET_SPEED);
 
+          // sum of errors for parameter optimization
+          // cte_int += abs(cte);
+          cte_int += cte * cte;
+
           // currently not used
           (void)angle;
 
-#if 0
           // test reset of simulator with message
-          static int mycnt;
-          if (mycnt++ > 2000) {
-            std::string msg = "42[\"reset\",{}]";
-            ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
-            mycnt = 0;
-          }
-#endif
+          if (PARAMETER_OPTIMIZATION_ENABLED) {
+            static int mycnt = 0;
+            if (mycnt++ > 1500) {
+              // reset simulator
+              std::string msg = "42[\"reset\",{}]";
+              ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
 
-          // DEBUG
-          std::cout << "CTE: " << cte << " Steering Value: " << steer_value
-                    << std::endl;
+              // next parameter set
+              pid = ps.next(cte_int);
+
+              // reset velocity pid and accumulated error
+              pid_v.reset();
+              cte_int = 0;
+
+              mycnt = 0;
+            }
+          } else {
+            // DEBUG
+            std::cout << "CTE: " << cte << " Steering Value: " << steer_value
+                      << std::endl;
+          }
 
           json msgJson;
           msgJson["steering_angle"] = steer_value;
           msgJson["throttle"] = throttle;
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
-          std::cout << msg << std::endl;
+          // std::cout << msg << std::endl;
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
         }
       } else {
@@ -99,7 +124,8 @@ int main() {
   });
 
   h.onConnection([&h](uWS::WebSocket<uWS::SERVER> ws, uWS::HttpRequest req) {
-    std::cout << "Connected!!!" << std::endl;
+    if (!PARAMETER_OPTIMIZATION_ENABLED)
+      std::cout << "Connected!!!" << std::endl;
   });
 
   h.onDisconnection([&h](uWS::WebSocket<uWS::SERVER> ws, int code,

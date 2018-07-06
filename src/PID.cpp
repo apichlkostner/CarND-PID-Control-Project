@@ -2,10 +2,6 @@
 #include <iostream>
 using namespace std;
 
-/*
- * TODO: Complete the PID class.
- */
-
 PID::~PID() {}
 
 void PID::Init(double Kp, double Ki, double Kd) {}
@@ -27,6 +23,7 @@ double PID::calc(double cte) {
   if (fresh_start_) {
     last_time_ = std::chrono::system_clock::now();
     cte_old_ = cte;
+    cte_int_ = 0;
     fresh_start_ = false;
   }
 
@@ -41,7 +38,7 @@ double PID::calc(double cte) {
 
   cte_int_ += cte * delta_t;
 
-  cout << "delta_t = " << delta_t << " integral = " << cte_int_ << endl;
+  //cout << "delta_t = " << delta_t << " integral = " << cte_int_ << endl;
 
   double result = -Kp_ * cte - Kd_ * cte_diff - Ki_ * cte_int_;
   result = minmax(result);

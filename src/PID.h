@@ -2,6 +2,7 @@
 #define PID_H
 
 #include <chrono>
+#include <vector>
 
 class PID {
  public:
@@ -31,6 +32,16 @@ class PID {
    */
   PID(double Kp, double Kd, double Ki) : Kp_(Kp), Ki_(Ki), Kd_(Kd){};
 
+  PID(const std::vector<double>& p) {
+    if (p.size() == 3) {
+      Kp_ = p[0];
+      Kd_ = p[1];
+      Ki_ = p[2];
+    }
+    cte_old_ = 0;
+    cte_int_ = 0;
+  };
+
   /*
    * Destructor.
    */
@@ -52,6 +63,11 @@ class PID {
   double TotalError();
 
   double calc(double cte);
+
+  void reset() {
+    cte_old_ = 0;
+    cte_int_ = 0;
+  }
 };
 
 #endif /* PID_H */

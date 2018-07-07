@@ -16,6 +16,8 @@ PID ParameterSearch::next(double error) {
        << dp_[1] << ", " << dp_[2] << ") e = " << error
        << " best = " << best_err_ << " s = " << state_ << std::endl;
 
+  logger_.log(std::to_string(iteration_), p_, dp_, error, best_err_);
+
   switch (state_) {
     case START:
       p_[pos_] += dp_[pos_];

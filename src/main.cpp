@@ -13,7 +13,7 @@ constexpr double pi() { return M_PI; }
 double deg2rad(double x) { return x * pi() / 180; }
 double rad2deg(double x) { return x * 180 / pi(); }
 
-constexpr bool PARAMETER_OPTIMIZATION_ENABLED = false;
+constexpr bool PARAMETER_OPTIMIZATION_ENABLED = true;
 
 // Checks if the SocketIO event has JSON data.
 // If there is data the JSON object in string format will be returned,
@@ -34,14 +34,23 @@ int main() {
   uWS::Hub h;
 
   constexpr double TARGET_SPEED = 30;
-  // PID pid(0.08, 0.1, 0.02);
-  // initial pid parameters
-  std::vector<double> p{0.29614, 0.247961, 0.130195};
-  // initial delta parameters for optimization algorithm
-  std::vector<double> dp{0.00811128, 0.0279605, 0.0118056};
 
-  ParameterSearch ps(p, dp);
+  // initial pid parameters
+  // std::vector<double> p{0.29614, 0.22, 0.130195};
+  std::vector<double> p{0.215795, 0.0994473, 0.1131};
+  // initial delta parameters for optimization algorithm
+  // std::vector<double> dp{0.00819321, 0.0310672, 0.0131173};
+  std::vector<double> dp{0.0235795, 0.0117406, 0.0175385};
+
+  // double err_init = 184.077;
+  double err_init = 100000;
+
+  ParameterSearch ps(p, dp, err_init);
+#if 1
   PID pid(p);
+#else
+  PID pid(0.08, 0.1, 0.02);
+#endif
   PID pid_v(0.3, 0.05, 0.005);
   double cte_int = 0;
 
@@ -65,16 +74,16 @@ int main() {
 
           double throttle = pid_v.calc(speed - TARGET_SPEED);
 
-          // sum of errors for parameter optimization
-          // cte_int += abs(cte);
-          cte_int += cte * cte;
-
           // currently not used
           (void)angle;
 
           // test reset of simulator with message
           if (PARAMETER_OPTIMIZATION_ENABLED) {
             static int mycnt = 0;
+
+            // sum of errors for parameter optimization
+            cte_int += cte * cte * cte * cte;
+
             if (mycnt++ > 1500) {
               // reset simulator
               std::string msg = "42[\"reset\",{}]";

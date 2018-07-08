@@ -13,7 +13,7 @@ constexpr double pi() { return M_PI; }
 double deg2rad(double x) { return x * pi() / 180; }
 double rad2deg(double x) { return x * 180 / pi(); }
 
-constexpr bool PARAMETER_OPTIMIZATION_ENABLED = true;
+constexpr bool PARAMETER_OPTIMIZATION_ENABLED = false;
 
 // Checks if the SocketIO event has JSON data.
 // If there is data the JSON object in string format will be returned,
@@ -35,23 +35,22 @@ int main() {
 
   constexpr double TARGET_SPEED = 30;
 
-  // initial pid parameters
-  // std::vector<double> p{0.29614, 0.22, 0.130195};
-  std::vector<double> p{0.215795, 0.0994473, 0.1131};
+  // initial pid parameters (best from last run of optimization)
+  std::vector<double> p{0.216005, 0.108957, 0.128885};
   // initial delta parameters for optimization algorithm
-  // std::vector<double> dp{0.00819321, 0.0310672, 0.0131173};
-  std::vector<double> dp{0.0235795, 0.0117406, 0.0175385};
-
-  // double err_init = 184.077;
-  double err_init = 100000;
+  std::vector<double> dp{0.005, 0.001, 0.002};
+  // last error of parameter search
+  double err_init = 121.665;
 
   ParameterSearch ps(p, dp, err_init);
-#if 1
+
+  // pid for steering angle
   PID pid(p);
-#else
-  PID pid(0.08, 0.1, 0.02);
-#endif
+
+  // pid for velocity
   PID pid_v(0.3, 0.05, 0.005);
+
+  // sum of error terms for parameter search
   double cte_int = 0;
 
   h.onMessage([&pid, &pid_v, &ps, &cte_int](uWS::WebSocket<uWS::SERVER> ws,
@@ -70,8 +69,11 @@ int main() {
           double cte = std::stod(j[1]["cte"].get<std::string>());
           double speed = std::stod(j[1]["speed"].get<std::string>());
           double angle = std::stod(j[1]["steering_angle"].get<std::string>());
+
+          // steering value in range [-1, 1] from PID controller
           double steer_value = pid.calc(cte);
 
+          // throttle setting from velocity pid controller
           double throttle = pid_v.calc(speed - TARGET_SPEED);
 
           // currently not used
@@ -79,12 +81,12 @@ int main() {
 
           // test reset of simulator with message
           if (PARAMETER_OPTIMIZATION_ENABLED) {
-            static int mycnt = 0;
+            static int runningcounter = 0;
 
             // sum of errors for parameter optimization
             cte_int += cte * cte * cte * cte;
 
-            if (mycnt++ > 1500) {
+            if (runningcounter++ > 1500) {
               // reset simulator
               std::string msg = "42[\"reset\",{}]";
               ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
@@ -96,7 +98,7 @@ int main() {
               pid_v.reset();
               cte_int = 0;
 
-              mycnt = 0;
+              runningcounter = 0;
             }
           } else {
             // DEBUG

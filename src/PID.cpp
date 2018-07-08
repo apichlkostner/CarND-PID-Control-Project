@@ -4,13 +4,7 @@ using namespace std;
 
 PID::~PID() {}
 
-void PID::Init(double Kp, double Ki, double Kd) {}
-
-void PID::UpdateError(double cte) {}
-
-double PID::TotalError() { return 0.; }
-
-static inline double minmax(double r) {
+static inline double bound_result(double r) {
   if (r > 1.)
     return 1.;
   else if (r < -1.)
@@ -31,17 +25,21 @@ double PID::calc(double cte) {
   std::chrono::duration<double> dur = current_time - last_time_;
   double delta_t = dur.count();
   double cte_diff = cte - cte_old_;
-  if (delta_t < 0.0001)
-    cte_diff = 0.;
-  else
+
+  constexpr double MINDELTATIME = 0.00001;
+
+  if (delta_t > MINDELTATIME) {
     cte_diff /= delta_t;
+  } else { 
+    // should not happen - just use cte_diff without dt
+  }
 
   cte_int_ += cte * delta_t;
 
-  //cout << "delta_t = " << delta_t << " integral = " << cte_int_ << endl;
-
   double result = -Kp_ * cte - Kd_ * cte_diff - Ki_ * cte_int_;
-  result = minmax(result);
+
+  // should be bounded to [-1, 1]
+  result = bound_result(result);
 
   cte_old_ = cte;
   last_time_ = current_time;

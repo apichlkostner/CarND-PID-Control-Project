@@ -3,16 +3,10 @@
 
 #include <chrono>
 #include <vector>
+#include <cassert>
 
 class PID {
  public:
-  /*
-   * Errors
-   */
-  double p_error;
-  double i_error;
-  double d_error;
-
   double cte_old_;
   double cte_int_;
 
@@ -33,11 +27,12 @@ class PID {
   PID(double Kp, double Kd, double Ki) : Kp_(Kp), Ki_(Ki), Kd_(Kd){};
 
   PID(const std::vector<double>& p) {
-    if (p.size() == 3) {
-      Kp_ = p[0];
-      Kd_ = p[1];
-      Ki_ = p[2];
-    }
+    assert(p.size() == 3);
+
+    Kp_ = p[0];
+    Kd_ = p[1];
+    Ki_ = p[2];
+
     cte_old_ = 0;
     cte_int_ = 0;
   };
@@ -46,21 +41,6 @@ class PID {
    * Destructor.
    */
   virtual ~PID();
-
-  /*
-   * Initialize PID.
-   */
-  void Init(double Kp, double Ki, double Kd);
-
-  /*
-   * Update the PID error variables given cross track error.
-   */
-  void UpdateError(double cte);
-
-  /*
-   * Calculate the total PID error.
-   */
-  double TotalError();
 
   double calc(double cte);
 

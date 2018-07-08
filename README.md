@@ -4,7 +4,7 @@
 
 - Implementation of a PID controller to control velocity and steering angle of a car.
 - Connect the controller to a car simulator.
-- Check the bevavior with different values of the PID parameters.
+- Check the behavior with different values of the PID parameters.
 - Optimize the PID parameters with coordinate ascent to have a minimum mse.
 
 ## Problem

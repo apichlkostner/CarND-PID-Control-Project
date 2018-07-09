@@ -13,6 +13,29 @@ The PID controller should control the steering angle so that the car has a safe 
 
 Since no car model is used there is also no additional feed forward control. So in curves the CTE increases directly with the change of the trajectory.
 
+## PID controller
+
+A PID controller is used to minimize the difference between the setpoint and the current measured value:
+
+error `e(t) = (setpoint - measurement(t))`
+
+To do this the controller can set a control variable (actuator). This is done using three term which depend on the error directly (proportional term), the derivative of the error (derivative term) and the integral of the error (integral term).
+
+`u(t) = K_p * e(t) + K_d * (e(t) - e(t-1)) * delta_t + K_i * sum(e(t') * delta_t)`
+
+In our case the process variable is the position of the car relative to the optimal trajectory. The control variable is the steering angle.
+
+1) Proportional term: if the distance between the setpoint and the measurement is larger, the proportional term also becomes larger. The proportional term sets the steering angle to zero when the target position is reached. Since the steering angle changed before the car's heading the car trajectory will overshoot the target position and the trajectory will oscillate.
+
+2) Derivative term: is proportional to the change of the error. When the error decreases it reduces the control variable and damps the oscillations from the proportional term. When the error increases suddenly it generates a strong response against it. It is sensitive against high frequency noise of the sensors which can generate high derivatives.
+
+3) Integral term: is proportional to the sum of the previous errors. It compensates drift of the system. If K_i is too high it will generate oscillations since the integrated error remains high when the setpoint is reached.
+
+For most applications the P and I terms are most important for a stable control. The derivative term should be relatively small since it's sensitive to noise.
+
+In out case we have a different behavior. There is no drift and the proportional term alone is enough to bring the system to the setpoint. So K_i can be small.
+And since the car's trajectory includes curves which are not modelled with a feed forward term we need a high derivative term to follow the target trajectory in curves.
+
 ## Solution
 
 ### Manual parameter initialization
@@ -45,6 +68,10 @@ Final result:
 Kp | Kd | Ki
 ---|----|---
 0.216005 | 0.108957 | 0.128885
+
+### Implementation
+
+The PID controller calculated `delta_t` with it's own timer. This is necessary since the value is not constant on all systems (operating system, settings of the simulator) and therefore can't be included in K_i and K_d.
 
 ## Result
 

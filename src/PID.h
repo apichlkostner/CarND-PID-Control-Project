@@ -1,21 +1,22 @@
 #ifndef PID_H
 #define PID_H
 
+#include <cassert>
 #include <chrono>
 #include <vector>
-#include <cassert>
 
 class PID {
  public:
-  double cte_old_;
-  double cte_int_;
-
   /*
    * Coefficients
    */
   double Kp_;
   double Ki_;
   double Kd_;
+
+  // for D and I term
+  double cte_old_;
+  double cte_int_;
 
   bool fresh_start_ = true;
 
@@ -24,7 +25,8 @@ class PID {
   /*
    * Constructor
    */
-  PID(double Kp, double Kd, double Ki) : Kp_(Kp), Ki_(Ki), Kd_(Kd){};
+  PID(double Kp, double Kd, double Ki)
+      : Kp_(Kp), Ki_(Ki), Kd_(Kd), cte_old_(0.), cte_int_(0.){};
 
   PID(const std::vector<double>& p) {
     assert(p.size() == 3);

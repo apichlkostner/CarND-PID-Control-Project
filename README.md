@@ -104,7 +104,9 @@ The PID controller calculated `delta_t` with it's own timer. This is necessary s
 
 The car drives safely the complete track but is not really comfortable for a human passenger.
 
-![](docu/simulator.png)
+![video of result](docu/pidsmall.mp4)
+
+![image of simulation](docu/simulator.png)
 
 ---
 

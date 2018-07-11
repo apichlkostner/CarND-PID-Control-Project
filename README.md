@@ -108,6 +108,9 @@ The car drives safely the complete track but is not really comfortable for a hum
 
 ![image of simulation](docu/simulator.png)
 
+Plot of cte (red) and control variable (green):
+![control](/docu/control.png)
+
 ---
 
 # Dependencies

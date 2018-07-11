@@ -36,9 +36,9 @@ int main() {
   constexpr double TARGET_SPEED = 30;
 
   // initial pid parameters (best from last run of optimization)
-  std::vector<double> p{0.152, 0.07, 0.05};
+  std::vector<double> p{0.15592, 0.069404, 0.05};
   // initial delta parameters for optimization algorithm
-  std::vector<double> dp{0.002, 0.0005, 0.001};
+  std::vector<double> dp{0.0018432, 0.000576, 0.000512};
   // last error of parameter search
   double err_init = 1e40;
 

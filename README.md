@@ -94,7 +94,7 @@ Results:
 Error function | Kp | Kd | Ki
 ---------------|---|----|---
 cte^4| 0.216005 | 0.108957 | 0.128885
-final error function | 0.152 | 0.07 | 0.05
+final error function | 0.15592 | 0.069404 | 0.05
 
 ### Implementation
 

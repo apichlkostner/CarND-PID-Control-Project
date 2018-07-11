@@ -36,11 +36,11 @@ int main() {
   constexpr double TARGET_SPEED = 30;
 
   // initial pid parameters (best from last run of optimization)
-  std::vector<double> p{0.216005, 0.108957, 0.128885};
+  std::vector<double> p{0.152, 0.07, 0.05};
   // initial delta parameters for optimization algorithm
-  std::vector<double> dp{0.005, 0.001, 0.002};
+  std::vector<double> dp{0.002, 0.0005, 0.001};
   // last error of parameter search
-  double err_init = 121.665;
+  double err_init = 1e40;
 
   ParameterSearch ps(p, dp, err_init);
 
@@ -52,53 +52,106 @@ int main() {
 
   // sum of error terms for parameter search
   double cte_int = 0;
+  bool first_start = true;
 
-  h.onMessage([&pid, &pid_v, &ps, &cte_int](uWS::WebSocket<uWS::SERVER> ws,
-                                            char *data, size_t length,
-                                            uWS::OpCode opCode) {
+  Logger measure_log("meas_" + std::to_string(p[0]) + "_" +
+                     std::to_string(p[1]) + "_" + std::to_string(p[2]) +
+                     "2.csv");
+
+  h.onMessage([&pid, &pid_v, &ps, &cte_int, &first_start, &measure_log](
+                  uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
+                  uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
     // The 2 signifies a websocket event
     if (length && length > 2 && data[0] == '4' && data[1] == '2') {
+      static int startcnt = 0;
+      startcnt++;
+
       auto s = hasData(std::string(data).substr(0, length));
       if (s != "") {
         auto j = json::parse(s);
         std::string event = j[0].get<std::string>();
         if (event == "telemetry") {
+          if (first_start) {
+            std::string msg = "42[\"reset\",{}]";
+            ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
+            first_start = false;
+          }
           // j[1] is the data JSON object
           double cte = std::stod(j[1]["cte"].get<std::string>());
           double speed = std::stod(j[1]["speed"].get<std::string>());
           double angle = std::stod(j[1]["steering_angle"].get<std::string>());
 
           // steering value in range [-1, 1] from PID controller
-          double steer_value = pid.calc(cte);
+          double steer_value = 0.;
 
           // throttle setting from velocity pid controller
-          double throttle = pid_v.calc(speed - TARGET_SPEED);
+          double throttle = 0.;
 
-          // currently not used
-          (void)angle;
+          // Wait after reset and ignore possible old values
+          constexpr int RESET_TIME = 10;
+          if (startcnt > RESET_TIME) {
+            steer_value = pid.calc(cte);
+            throttle = pid_v.calc(speed - TARGET_SPEED);
+          }
+
+          // logging
+          std::vector<double> measurements{cte, steer_value, angle, speed,
+                                           throttle};
+          measure_log.log(std::to_string(pid.Kp_) + "_" +
+                              std::to_string(pid.Kd_) + "_" +
+                              std::to_string(pid.Ki_),
+                          measurements);
 
           // test reset of simulator with message
           if (PARAMETER_OPTIMIZATION_ENABLED) {
             static int runningcounter = 0;
 
             // sum of errors for parameter optimization
-            cte_int += cte * cte * cte * cte;
+            // cte^2 and steer_value^2 should be minimized
+            constexpr double ERROR_WEIGHT = 0.15;
+            cte_int += ERROR_WEIGHT * cte * cte +
+                       (1.0 - ERROR_WEIGHT) * steer_value * steer_value;
 
-            if (runningcounter++ > 1500) {
+            // change of steer_value sign should be penalized
+            static double steer_value_old = 0;
+            static double oscillation_error = 0;
+            if (((steer_value > 0) && (steer_value_old < 0)) ||
+                ((steer_value < 0) && (steer_value_old > 0))) {
+              constexpr double OSCERRDELTA = 0.6;
+              cte_int += OSCERRDELTA;
+              oscillation_error += OSCERRDELTA;
+            }
+
+            steer_value_old = steer_value;
+
+            // run for maximum number of steps or till the car leaves the road
+            // cte might be high since some old messages from the last try can
+            // still arrive
+            constexpr int RUNNINGCOUNTERMAX = 1500;
+            if ((runningcounter++ > RUNNINGCOUNTERMAX) ||
+                ((runningcounter > 20) && (fabs(cte) > 3.))) {
               // reset simulator
               std::string msg = "42[\"reset\",{}]";
               ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
 
+              if (fabs(cte) > 3.)
+                cte_int *= (RUNNINGCOUNTERMAX - runningcounter) * 1e20;
+
               // next parameter set
               pid = ps.next(cte_int);
+
+              std::cout << "Oscillation error = " +
+                               std::to_string(oscillation_error)
+                        << std::endl;
 
               // reset velocity pid and accumulated error
               pid_v.reset();
               cte_int = 0;
-
+              oscillation_error = 0;
               runningcounter = 0;
+              startcnt = 0;
             }
           } else {
             // DEBUG

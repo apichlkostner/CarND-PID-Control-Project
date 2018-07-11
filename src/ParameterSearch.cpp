@@ -25,7 +25,7 @@ PID ParameterSearch::next(double error) {
     case FORWARD:
       if (error < best_err_) {
         best_err_ = error;
-        dp_[pos_] *= 1.1;
+        dp_[pos_] *= 1.2;
         pos_ = (pos_ + 1) % p_.size();
         p_[pos_] += dp_[pos_];
         state_ = FORWARD;
@@ -38,10 +38,10 @@ PID ParameterSearch::next(double error) {
     case BACKWARD:
       if (error < best_err_) {
         best_err_ = error;
-        dp_[pos_] *= 1.1;
+        dp_[pos_] *= 1.2;
       } else {
         p_[pos_] += dp_[pos_];
-        dp_[pos_] *= 0.9;
+        dp_[pos_] *= 0.8;
       }
       state_ = FORWARD;
       pos_ = (pos_ + 1) % p_.size();

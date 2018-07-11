@@ -61,13 +61,40 @@ Kp | Kd | Ki
 To find better PID parameters a automatic search was done.
 Starting with the manual parameters the car was driven in the simulator and the sum of an error measure was calculated. Then it was searched in the direction of one of the coordinates to find better behavior.
 
-The error measure finally used was cte^4 which gives a high penaltiy on higher cte. Using only cte^2 gave too much oscillations during the curves.
+The first error function tried was cte^2 which gave too much oscillations. First improvement was cte^4 to give higher penalty to large cte.
 
-Final result:
+But these functions always found values with much oscillations.
 
-Kp | Kd | Ki
----|----|---
-0.216005 | 0.108957 | 0.128885
+The final idea to give a good passenger comfort was:
+1) The car must not leave the road
+2) The car should follow the target trajectory as good as possible 
+3) The car should use small steering angle when possible, even if the target trajectory is not followed exactly
+4) The car should change the sign of the steering angle as few times a possible
+
+The error function is then:
+
+If car don't leaves the road:
+`a * cte^2 + b * steer_value^2 + c * numSignChg`
+
+with the hyperparameters
+
+ a   | b    | c
+-----|------|-----
+0.15 | 0.85 | 0.6
+
+and `numSignChg = "number of sign changes of steer_value"`
+
+If the car leaves the road:
+`(RUNNINGCOUNTERMAX - runningcounter) * 1e20` which is a measure how long the car followed the road before it left the road (always higher than a complete track without leaving the road)
+
+The hyperparameters were found by first plotting the cte^2 and steer_value^2 values and weight them to be in a similar range. Finally the parameters where changed to give a good looking result in the simulator.
+
+Results:
+
+Error function | Kp | Kd | Ki
+---------------|---|----|---
+cte^4| 0.216005 | 0.108957 | 0.128885
+final error function | 0.152 | 0.07 | 0.05
 
 ### Implementation
 
@@ -75,7 +102,7 @@ The PID controller calculated `delta_t` with it's own timer. This is necessary s
 
 ## Result
 
-The car drives safely the complete track but the oscillations are much too strong for a human passenger.
+The car drives safely the complete track but is not really comfortable for a human passenger.
 
 ![](docu/simulator.png)
 

@@ -25,6 +25,12 @@ class Logger {
     file_ << std::endl;
   }
 
+  void log(std::string log, const std::vector<double>& values) {
+    file_ << log;
+    for (const auto v : values) file_ << ", " << v;
+    file_ << std::endl;
+  }
+
  private:
   std::ofstream file_;
 };

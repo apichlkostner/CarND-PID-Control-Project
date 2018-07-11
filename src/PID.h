@@ -15,8 +15,8 @@ class PID {
   double Kd_;
 
   // for D and I term
-  double cte_old_;
-  double cte_int_;
+  double cte_old_ = 0.0;
+  double cte_int_ = 0.0;
 
   bool fresh_start_ = true;
 
@@ -25,8 +25,7 @@ class PID {
   /*
    * Constructor
    */
-  PID(double Kp, double Kd, double Ki)
-      : Kp_(Kp), Ki_(Ki), Kd_(Kd), cte_old_(0.), cte_int_(0.){};
+  PID(double Kp, double Kd, double Ki) : Kp_(Kp), Ki_(Ki), Kd_(Kd){};
 
   PID(const std::vector<double>& p) {
     assert(p.size() == 3);
@@ -34,9 +33,6 @@ class PID {
     Kp_ = p[0];
     Kd_ = p[1];
     Ki_ = p[2];
-
-    cte_old_ = 0;
-    cte_int_ = 0;
   };
 
   /*
